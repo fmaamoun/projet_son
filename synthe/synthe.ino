@@ -1,53 +1,55 @@
 #include <Audio.h>
 #include "MyDsp.h"
 
+// ---------- OBJETS AUDIO ------------
 MyDsp myDsp;
 AudioOutputI2S out;
 AudioControlSGTL5000 audioShield;
-AudioConnection patchCord0(myDsp,0,out,0);
-AudioConnection patchCord1(myDsp,0,out,1);
-
-
+AudioConnection patchCord0(myDsp, 0, out, 0);
+AudioConnection patchCord1(myDsp, 0, out, 1);
 
 #include <Bounce2.h>
 
-// Volume control variables
-int volume = 127;            // Default volume (MIDI range 0-127)
-int prevVolume = volume;     // Previous volume for change detection
+// -------------- VOLUME ---------------
+int volume = 127;       // 0..127 (approx MIDI)
+int prevVolume = volume;
 
-// Define pins for white and black keys
-const int whiteKeys[] = {0, 1, 2, 3, 4, 5, 9}; // GPIO pins for C, D, E, F, G, A, B
-const int blackKeys[] = {15, 16, 17, 22, 13};  // GPIO pins for C#, D#, F#, G#, A#
+// ---------- TOUCHES (GPIO) -----------
+const int whiteKeys[] = {0, 1, 2, 3, 4, 5, 9}; // C, D, E, F, G, A, B
+const int blackKeys[] = {15, 16, 17, 22, 13};  // C#, D#, F#, G#, A#
 
-// Note labels for serial output
+// Étiquettes de notes (debug)
 const char* whiteNotes[] = {"C", "D", "E", "F", "G", "A", "B"};
 const char* blackNotes[] = {"C#", "D#", "F#", "G#", "A#"};
 
+// Fréquences associées
 const float whiteFreqs[] = {261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88};
 const float blackFreqs[] = {277.18, 311.13, 369.99, 415.30, 466.16};
 
-// Debouncers for key stabilization
+// ----- DEBOUNCE (Bounce2) ------------
 Bounce whiteDebouncers[7];
 Bounce blackDebouncers[5];
 
 void setup() {
-  AudioMemory(2);
+  // Initialisation audio
+  AudioMemory(8);
   audioShield.enable();
-  audioShield.volume(0.5);
+  audioShield.volume(0.5);  // Volume du codec (0.0 -> 1.0)
 
+  // Série pour debug
   Serial.begin(9600);
-  
-  // Potentiometer setup (A0 = pin 14 on Teensy)
+
+  // Potentiomètre sur A0
   pinMode(A0, INPUT);
 
-  // Initialize white keys with debouncing
+  // Initialisation touches blanches
   for (int i = 0; i < 7; i++) {
     pinMode(whiteKeys[i], INPUT);
     whiteDebouncers[i].attach(whiteKeys[i]);
-    whiteDebouncers[i].interval(25); // 25ms debounce time
+    whiteDebouncers[i].interval(25); // ms
   }
 
-  // Initialize black keys with debouncing
+  // Initialisation touches noires
   for (int i = 0; i < 5; i++) {
     pinMode(blackKeys[i], INPUT);
     blackDebouncers[i].attach(blackKeys[i]);
@@ -56,37 +58,52 @@ void setup() {
 }
 
 void loop() {
-  // Read potentiometer value
+  // Lire le potentiomètre (0..1023) -> volume (0..100%)
   int analogValue = analogRead(A0);
-  // Convert 0-1023 to 0-100%
   volume = map(analogValue, 0, 1023, 0, 100);
-  
-  // Detect significant volume changes (threshold prevents jitter)
-  if(abs(volume - prevVolume) > 2) {
+
+  // Afficher volume si variation > 2%
+  if (abs(volume - prevVolume) > 2) {
     Serial.print("Volume: ");
     Serial.print(volume);
     Serial.println("%");
     prevVolume = volume;
   }
 
-  // Check white key status
+  // Mettre à jour les debouncers
   for (int i = 0; i < 7; i++) {
     whiteDebouncers[i].update();
-    if (whiteDebouncers[i].rose()) { // Key pressed
+
+    // 1) Appui (rose) => noteOn
+    if (whiteDebouncers[i].rose()) {
+      myDsp.noteOn(whiteFreqs[i]);
       Serial.print("White key pressed: ");
       Serial.println(whiteNotes[i]);
-      myDsp.setFreq(whiteFreqs[i]);
+    }
+
+    // 2) Relâchement (fell) => noteOff
+    if (whiteDebouncers[i].fell()) {
+      myDsp.noteOff();
+      Serial.print("White key released: ");
+      Serial.println(whiteNotes[i]);
     }
   }
 
-  // Check black key status
   for (int i = 0; i < 5; i++) {
     blackDebouncers[i].update();
-    if (blackDebouncers[i].rose()) { // Key pressed
+
+    // 1) Appui (rose) => noteOn
+    if (blackDebouncers[i].rose()) {
+      myDsp.noteOn(blackFreqs[i]);
       Serial.print("Black key pressed: ");
       Serial.println(blackNotes[i]);
-      myDsp.setFreq(blackFreqs[i]);
+    }
+
+    // 2) Relâchement (fell) => noteOff
+    if (blackDebouncers[i].fell()) {
+      myDsp.noteOff();
+      Serial.print("Black key released: ");
+      Serial.println(blackNotes[i]);
     }
   }
 }
-
