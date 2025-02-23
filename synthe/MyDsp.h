@@ -1,5 +1,5 @@
-#ifndef faust_teensy_h_
-#define faust_teensy_h_
+#ifndef MYDSP_H
+#define MYDSP_H
 
 #include "Arduino.h"
 #include "AudioStream.h"
@@ -8,40 +8,36 @@
 #include "Sine.h"
 #include "Echo.h"
 
-class MyDsp : public AudioStream
-{
+class MyDsp : public AudioStream {
   public:
     MyDsp();
     ~MyDsp();
 
-    // Méthode update() appelée automatiquement par le moteur Audio
+    // Méthode update() appelée en continu par le moteur Audio
     virtual void update(void);
 
-    // Lance la note à une fréquence donnée
+    // Lance la note à la fréquence indiquée
     void noteOn(float freq);
 
-    // Déclenche le "fade out" pour arrêter la note en douceur
+    // Déclenche le fade-out pour arrêter la note en douceur
     void noteOff();
 
   private:
-    // Méthode interne pour modifier la fréquence de l'oscillateur
+    // Change la fréquence de l'oscillateur interne
     void setFreq(float freq);
 
     // Indique si une note est en cours de lecture
     bool isPlaying;
-
-    // Indique si on est en phase de "release" (fade out)
+    // Indique si le fade-out est en cours
     bool isReleasing;
-
-    // Amplitude courante (de 1.0 jusqu'à 0.0 quand on relâche)
+    // Amplitude actuelle (de 1.0 à 0.0 pendant le fade-out)
     float currentAmplitude;
-
-    // Nombre d'échantillons sur lesquels on fait le fade out
+    // Nombre d'échantillons pour effectuer le fade-out
     unsigned int releaseFrames;
 
-    // Générateurs (un oscillateur) + effet (Echo)
+    // Oscillateur et effet d'écho
     Sine sine;
     Echo echo;
 };
 
-#endif
+#endif // MYDSP_H
