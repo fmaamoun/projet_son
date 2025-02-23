@@ -1,6 +1,7 @@
 #include <Audio.h>
 #include "MyDsp.h"
 #include <Bounce2.h>
+#include <ResponsiveAnalogRead.h>
 
 // ==================== OBJETS AUDIO ====================
 
@@ -30,8 +31,9 @@ AudioConnection patchCordMtoOut2(mixer1, 0, out, 1);
 AudioControlSGTL5000 audioShield;
 
 // ==================== VARIABLES DE VOLUME ====================
-int volume = 127;       // 0..127 (approx. MIDI)
-int prevVolume = volume;
+const int POT_PIN = A0;
+float volume = 0.5;       // 0.0 -> 1.0
+ResponsiveAnalogRead analog(POT_PIN, true); // Création de l'objet
 
 // ==================== TOUCHES (GPIO) ====================
 
@@ -76,13 +78,16 @@ void setup() {
   // Initialisation du système audio
   AudioMemory(12); // allouer plus de mémoire pour 4 voix
   audioShield.enable();
-  audioShield.volume(0.5);  // Volume du codec (0.0 -> 1.0)
+  audioShield.volume(volume);  // Volume du codec (0.0 -> 1.0)
 
   // Début du debug sur le port série
   Serial.begin(9600);
 
   // Potentiomètre sur A0 pour le contrôle du volume
   pinMode(A0, INPUT);
+  analog.setActivityThreshold(20);    // Seuil de sensibilité
+  analog.setSnapMultiplier(0.03);     // Rapidité de réponse
+  analog.enableEdgeSnap();            // "Aimant" aux positions min/max
 
   // Initialisation des touches blanches
   for (int i = 0; i < 7; i++) {
@@ -93,15 +98,18 @@ void setup() {
 }
 
 void loop() {
-  // Lecture du potentiomètre (0..1023) et mise à jour du volume (0..100%)
-  int analogValue = analogRead(A0);
-  volume = map(analogValue, 0, 1023, 0, 100);
-  if (abs(volume - prevVolume) > 2) {
+  // Lecture du potentiomètre et mise à jour du volume 
+  analog.update(); // Mise à jour de la lecture
+  
+  if(analog.hasChanged()) {
+    float volume = analog.getValue() / 1023.0;
+    audioShield.volume(volume); 
+    
+    // Affichage
     Serial.print("Volume: ");
-    Serial.print(volume);
-    Serial.println("%");
-    prevVolume = volume;
+    Serial.println(volume, 2); // 2 décimales
   }
+
 
   // ----------------- GESTION DES TOUCHES BLANCHES -----------------
   for (int i = 0; i < 7; i++) {
