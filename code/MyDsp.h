@@ -4,9 +4,17 @@
 #include "Arduino.h"
 #include "AudioStream.h"
 #include "Audio.h"
-
 #include "Sine.h"
 #include "Echo.h"
+
+// Définition des modes de synthèse
+enum SynthMode {
+  MODE_SINE,
+  MODE_SQUARE,
+  MODE_SAW,
+  MODE_TRIANGLE,
+  MODE_PULSE
+};
 
 class MyDsp : public AudioStream {
   public:
@@ -22,22 +30,31 @@ class MyDsp : public AudioStream {
     // Déclenche le fade-out pour arrêter la note en douceur
     void noteOff();
 
+    // Permet de changer le mode de synthèse (onde)
+    void setMode(SynthMode newMode);
+
   private:
-    // Change la fréquence de l'oscillateur interne
+    // Modifie la fréquence de l'oscillateur et met à jour la phase (pour modes non-sinusoïdaux)
     void setFreq(float freq);
 
-    // Indique si une note est en cours de lecture
+    // Etat de la note
     bool isPlaying;
-    // Indique si le fade-out est en cours
     bool isReleasing;
-    // Amplitude actuelle (de 1.0 à 0.0 pendant le fade-out)
     float currentAmplitude;
-    // Nombre d'échantillons pour effectuer le fade-out
+    // Nombre d'échantillons pour le fade-out
     unsigned int releaseFrames;
 
-    // Oscillateur et effet d'écho
+    // Oscillateur utilisé pour le mode SINE
     Sine sine;
+    // Pour les modes non-sinusoïdaux, on utilise un accumulateur de phase
+    float phase;
+    float phaseIncrement;
+
+    // Effet d'écho appliqué sur le signal
     Echo echo;
+    
+    // Mode de synthèse courant
+    SynthMode mode;
 };
 
 #endif // MYDSP_H

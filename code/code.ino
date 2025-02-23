@@ -3,119 +3,115 @@
 #include <Bounce2.h>
 #include <ResponsiveAnalogRead.h>
 
-// ==================== OBJETS AUDIO ====================
-
-// Déclaration de 4 voix polyphoniques
-MyDsp voice1;
-MyDsp voice2;
-MyDsp voice3;
-MyDsp voice4;
-
-// Mixer 4 voies
-AudioMixer4 mixer1;
-
-// Sortie audio I2S
+// ==================== AUDIO OBJECTS ====================
+MyDsp voice1, voice2, voice3, voice4;
+AudioMixer4 mixer;
 AudioOutputI2S out;
-
-// Connections des voix au mixer
-AudioConnection patchCord1(voice1, 0, mixer1, 0);
-AudioConnection patchCord2(voice2, 0, mixer1, 1);
-AudioConnection patchCord3(voice3, 0, mixer1, 2);
-AudioConnection patchCord4(voice4, 0, mixer1, 3);
-
-// Connection du mixer à la sortie stéréo
-AudioConnection patchCordMtoOut1(mixer1, 0, out, 0);
-AudioConnection patchCordMtoOut2(mixer1, 0, out, 1);
-
-// Contrôle du codec audio
 AudioControlSGTL5000 audioShield;
 
-// ==================== VARIABLES DE VOLUME ====================
+// Audio connections
+AudioConnection patchCord1(voice1, 0, mixer, 0);
+AudioConnection patchCord2(voice2, 0, mixer, 1);
+AudioConnection patchCord3(voice3, 0, mixer, 2);
+AudioConnection patchCord4(voice4, 0, mixer, 3);
+AudioConnection patchCord5(mixer, 0, out, 0);
+AudioConnection patchCord6(mixer, 0, out, 1);
+
+// ==================== VOLUME CONTROL ====================
 const int POT_PIN = A0;
-float volume = 0.5;       // 0.0 -> 1.0
-ResponsiveAnalogRead analog(POT_PIN, true); // Création de l'objet
+float volume = 0.5;
+ResponsiveAnalogRead analog(POT_PIN, true);
 
-// ==================== TOUCHES (GPIO) ====================
+// ==================== KEY CONFIGURATION ====================
+#define NUM_KEYS 7
+const int whiteKeys[NUM_KEYS] = {0, 1, 2, 3, 4, 5, 9};
+const char* whiteNotes[NUM_KEYS] = {"C", "D", "E", "F", "G", "A", "B"};
+const float whiteFreqs[NUM_KEYS] = {261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88};
 
-const int whiteKeys[] = {0, 1, 2, 3, 4, 5, 9}; // touches blanches : C, D, E, F, G, A, B
+Bounce whiteDebouncers[NUM_KEYS];
 
-// Étiquettes de notes pour le debug
-const char* whiteNotes[] = {"C", "D", "E", "F", "G", "A", "B"};
+// ==================== MODE BUTTON ====================
+const int modeButtonPin = 16;
+Bounce modeButton;
+int currentMode = 0;  // 0-4: SINE, SQUARE, SAW, TRIANGLE, PULSE
 
-// Fréquences associées aux notes
-const float whiteFreqs[] = {261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88};
-
-// ==================== DEBOUNCE (Bounce2) ====================
-Bounce whiteDebouncers[7];
-Bounce blackDebouncers[5];
-
-// ==================== GESTION DES VOIX ====================
+// ==================== VOICE MANAGEMENT ====================
 #define NUM_VOICES 4
-bool voicePlaying[NUM_VOICES] = {false, false, false, false};
-float voiceFreq[NUM_VOICES] = {0, 0, 0, 0};
+bool voicePlaying[NUM_VOICES] = {false};
+float voiceFreq[NUM_VOICES] = {0};
 
-// Cherche une voix libre parmi les NUM_VOICES
 int findFreeVoice() {
   for (int i = 0; i < NUM_VOICES; i++) {
-    if (!voicePlaying[i]) {
-      return i;
-    }
-  }
-  return -1; // Aucune voix libre
-}
-
-// Cherche la voix qui joue la fréquence donnée (tolérance sur les flottants)
-int findVoiceWithFreq(float freq) {
-  for (int i = 0; i < NUM_VOICES; i++) {
-    if (voicePlaying[i] && fabs(voiceFreq[i] - freq) < 0.1) {
-      return i;
-    }
+    if (!voicePlaying[i]) return i;
   }
   return -1;
 }
 
+int findVoiceWithFreq(float freq) {
+  for (int i = 0; i < NUM_VOICES; i++) {
+    if (voicePlaying[i] && fabs(voiceFreq[i] - freq) < 0.1) return i;
+  }
+  return -1;
+}
+
+void updateAllVoicesMode() {
+  voice1.setMode(currentMode);
+  voice2.setMode(currentMode);
+  voice3.setMode(currentMode);
+  voice4.setMode(currentMode);
+}
+
 void setup() {
-  // Initialisation du système audio
-  AudioMemory(12); // allouer plus de mémoire pour 4 voix
+  AudioMemory(16);
   audioShield.enable();
-  audioShield.volume(volume);  // Volume du codec (0.0 -> 1.0)
-
-  // Début du debug sur le port série
+  audioShield.volume(volume);
+  
   Serial.begin(9600);
+  
+  analog.setActivityThreshold(20);
+  analog.setSnapMultiplier(0.03);
+  analog.enableEdgeSnap();
 
-  // Potentiomètre sur A0 pour le contrôle du volume
-  pinMode(A0, INPUT);
-  analog.setActivityThreshold(20);    // Seuil de sensibilité
-  analog.setSnapMultiplier(0.03);     // Rapidité de réponse
-  analog.enableEdgeSnap();            // "Aimant" aux positions min/max
-
-  // Initialisation des touches blanches
-  for (int i = 0; i < 7; i++) {
+  for (int i = 0; i < NUM_KEYS; i++) {
     pinMode(whiteKeys[i], INPUT);
     whiteDebouncers[i].attach(whiteKeys[i]);
-    whiteDebouncers[i].interval(25); // ms
+    whiteDebouncers[i].interval(25);
   }
+
+  pinMode(modeButtonPin, INPUT_PULLUP);
+  modeButton.attach(modeButtonPin);
+  modeButton.interval(25);
+  
+  updateAllVoicesMode();
+  Serial.println("Mode: SINE");
 }
 
 void loop() {
-  // Lecture du potentiomètre et mise à jour du volume 
-  analog.update(); // Mise à jour de la lecture
-  
-  if(analog.hasChanged()) {
-    float volume = analog.getValue() / 1023.0;
-    audioShield.volume(volume); 
-    
-    // Affichage
+  analog.update();
+  if (analog.hasChanged()) {
+    volume = analog.getValue() / 1023.0;
+    audioShield.volume(volume);
     Serial.print("Volume: ");
-    Serial.println(volume, 2); // 2 décimales
+    Serial.println(volume, 2);
   }
 
+  modeButton.update();
+  if (modeButton.rose()) {
+    currentMode = (currentMode + 1) % 5;
+    updateAllVoicesMode();
+    Serial.print("Mode changed to: ");
+    switch(currentMode) {
+      case 0: Serial.println("SINE"); break;
+      case 1: Serial.println("SQUARE"); break;
+      case 2: Serial.println("SAW"); break;
+      case 3: Serial.println("TRIANGLE"); break;
+      case 4: Serial.println("PULSE"); break;
+    }
+  }
 
-  // ----------------- GESTION DES TOUCHES BLANCHES -----------------
-  for (int i = 0; i < 7; i++) {
+  for (int i = 0; i < NUM_KEYS; i++) {
     whiteDebouncers[i].update();
 
-    // Lors de l'appui, on recherche une voix libre et on lance la note
     if (whiteDebouncers[i].rose()) {
       float freq = whiteFreqs[i];
       int v = findFreeVoice();
@@ -128,14 +124,11 @@ void loop() {
         }
         voicePlaying[v] = true;
         voiceFreq[v] = freq;
-        Serial.print("White key pressed: ");
+        Serial.print("Note ON: ");
         Serial.println(whiteNotes[i]);
-      } else {
-        Serial.println("Aucune voix libre pour la touche blanche !");
       }
     }
 
-    // Au relâchement, on trouve la voix jouant la note et on lance le fade-out
     if (whiteDebouncers[i].fell()) {
       float freq = whiteFreqs[i];
       int v = findVoiceWithFreq(freq);
@@ -146,8 +139,8 @@ void loop() {
           case 2: voice3.noteOff(); break;
           case 3: voice4.noteOff(); break;
         }
-        voicePlaying[v] = false; // On libère immédiatement la voix (vous pouvez l'affiner pour attendre la fin du fade)
-        Serial.print("White key released: ");
+        voicePlaying[v] = false;
+        Serial.print("Note OFF: ");
         Serial.println(whiteNotes[i]);
       }
     }
