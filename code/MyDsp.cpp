@@ -9,12 +9,8 @@
 
 MyDsp::MyDsp()
   : AudioStream(AUDIO_OUTPUTS, new audio_block_t*[AUDIO_OUTPUTS]),
-    sine(AUDIO_SAMPLE_RATE_EXACT),
-    echo(AUDIO_SAMPLE_RATE_EXACT, 10000)
+    sine(AUDIO_SAMPLE_RATE_EXACT)
 {
-  // Réglages de l'effet d'écho
-  echo.setDel(10000);
-  echo.setFeedback(0.1);
 
   isPlaying = false;
   isReleasing = false;
@@ -53,7 +49,7 @@ void MyDsp::noteOff() {
   isReleasing = true;
 }
 
-void MyDsp::setMode(SynthMode newMode) {
+void MyDsp::setMode(int newMode) {
   mode = newMode;
 }
 
@@ -93,8 +89,7 @@ void MyDsp::update(void) {
         inOsc = sampleVal * 0.5f * currentAmplitude;
       }
 
-      // Passage par l'effet d'écho
-      float currentSample = echo.tick(inOsc);
+      float currentSample =inOsc;
 
       // Gestion du fade-out
       if (isReleasing) {

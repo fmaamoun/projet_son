@@ -5,7 +5,6 @@
 #include "AudioStream.h"
 #include "Audio.h"
 #include "Sine.h"
-#include "Echo.h"
 
 // Définition des modes de synthèse
 enum SynthMode {
@@ -31,7 +30,7 @@ class MyDsp : public AudioStream {
     void noteOff();
 
     // Permet de changer le mode de synthèse (onde)
-    void setMode(SynthMode newMode);
+    void setMode(int newMode);
 
   private:
     // Modifie la fréquence de l'oscillateur et met à jour la phase (pour modes non-sinusoïdaux)
@@ -49,12 +48,9 @@ class MyDsp : public AudioStream {
     // Pour les modes non-sinusoïdaux, on utilise un accumulateur de phase
     float phase;
     float phaseIncrement;
-
-    // Effet d'écho appliqué sur le signal
-    Echo echo;
     
     // Mode de synthèse courant
-    SynthMode mode;
+    int mode;
 };
 
 #endif // MYDSP_H

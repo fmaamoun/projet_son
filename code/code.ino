@@ -6,6 +6,8 @@
 // ==================== AUDIO OBJECTS ====================
 MyDsp voice1, voice2, voice3, voice4;
 AudioMixer4 mixer;
+AudioMixer4 dryWetMixer;
+AudioEffectFreeverbStereo reverb;
 AudioOutputI2S out;
 AudioControlSGTL5000 audioShield;
 
@@ -14,13 +16,22 @@ AudioConnection patchCord1(voice1, 0, mixer, 0);
 AudioConnection patchCord2(voice2, 0, mixer, 1);
 AudioConnection patchCord3(voice3, 0, mixer, 2);
 AudioConnection patchCord4(voice4, 0, mixer, 3);
-AudioConnection patchCord5(mixer, 0, out, 0);
-AudioConnection patchCord6(mixer, 0, out, 1);
+AudioConnection patchCord5(mixer, 0, dryWetMixer, 0);  
+AudioConnection patchCord6(mixer, 0, reverb, 0);        
+AudioConnection patchCord7(reverb, 0, dryWetMixer, 1);  
+AudioConnection patchCord8(dryWetMixer, 0, out, 0);     
+AudioConnection patchCord9(dryWetMixer, 0, out, 1);     
+
 
 // ==================== VOLUME CONTROL ====================
-const int POT_PIN = A0;
+const int POT_VOL_PIN = A0;
 float volume = 0.5;
-ResponsiveAnalogRead analog(POT_PIN, true);
+ResponsiveAnalogRead analog_vol(POT_VOL_PIN, true);
+
+// ==================== REVERB : ROOM CONTROL ====================
+const int POT_ROOM_PIN = A2;
+float roomsize = 0.4;
+ResponsiveAnalogRead analog_room(POT_ROOM_PIN, true);
 
 // ==================== KEY CONFIGURATION ====================
 #define NUM_KEYS 7
@@ -31,7 +42,7 @@ const float whiteFreqs[NUM_KEYS] = {261.63, 293.66, 329.63, 349.23, 392.00, 440.
 Bounce whiteDebouncers[NUM_KEYS];
 
 // ==================== MODE BUTTON ====================
-const int modeButtonPin = 16;
+const int modeButtonPin = 17;
 Bounce modeButton;
 int currentMode = 0;  // 0-4: SINE, SQUARE, SAW, TRIANGLE, PULSE
 
@@ -68,9 +79,13 @@ void setup() {
   
   Serial.begin(9600);
   
-  analog.setActivityThreshold(20);
-  analog.setSnapMultiplier(0.03);
-  analog.enableEdgeSnap();
+  analog_vol.setActivityThreshold(20);
+  analog_vol.setSnapMultiplier(0.03);
+  analog_vol.enableEdgeSnap();
+
+  analog_room.setActivityThreshold(20);
+  analog_room.setSnapMultiplier(0.03);
+  analog_room.enableEdgeSnap();
 
   for (int i = 0; i < NUM_KEYS; i++) {
     pinMode(whiteKeys[i], INPUT);
@@ -78,21 +93,32 @@ void setup() {
     whiteDebouncers[i].interval(25);
   }
 
-  pinMode(modeButtonPin, INPUT_PULLUP);
+  pinMode(modeButtonPin, INPUT);
   modeButton.attach(modeButtonPin);
   modeButton.interval(25);
   
   updateAllVoicesMode();
   Serial.println("Mode: SINE");
+
+  reverb.roomsize(roomsize);  // Taille maximale
+  reverb.damping(0.6);    // Pas d'atténuation
 }
 
 void loop() {
-  analog.update();
-  if (analog.hasChanged()) {
-    volume = analog.getValue() / 1023.0;
+  analog_vol.update();
+  if (analog_vol.hasChanged()) {
+    volume = analog_vol.getValue() / 1023.0;
     audioShield.volume(volume);
     Serial.print("Volume: ");
     Serial.println(volume, 2);
+  }
+
+  analog_room.update();
+  if (analog_room.hasChanged()) {
+    roomsize = analog_room.getValue() / 1023.0;
+    reverb.roomsize(roomsize);
+    Serial.print("Reverb: ");
+    Serial.println(roomsize, 2);
   }
 
   modeButton.update();
