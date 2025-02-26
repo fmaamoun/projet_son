@@ -71,6 +71,18 @@ void updateAllVoicesMode() {
   voice3.setMode(currentMode);
   voice4.setMode(currentMode);
 }
+void updateMixerGain() {
+    int activeVoices = 0;
+    for (int i = 0; i < NUM_VOICES; i++) {
+        if (voicePlaying[i]) activeVoices++;
+    }
+    
+    float gain = (activeVoices > 0) ? (1.0 / activeVoices) : 1.0;
+    for (int i = 0; i < NUM_VOICES; i++) {
+        mixer.gain(i, gain);
+    }
+}
+
 
 void setup() {
   AudioMemory(16);
@@ -152,6 +164,8 @@ void loop() {
         voiceFreq[v] = freq;
         Serial.print("Note ON: ");
         Serial.println(whiteNotes[i]);
+        updateMixerGain();
+
       }
     }
 
@@ -168,6 +182,8 @@ void loop() {
         voicePlaying[v] = false;
         Serial.print("Note OFF: ");
         Serial.println(whiteNotes[i]);
+        updateMixerGain();
+
       }
     }
   }
