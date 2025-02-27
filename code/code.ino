@@ -29,7 +29,7 @@ float volume = 0.5;
 ResponsiveAnalogRead analog_vol(POT_VOL_PIN, true);
 
 // ==================== REVERB : ROOM CONTROL ====================
-const int POT_ROOM_PIN = A2;
+const int POT_ROOM_PIN = A8;
 float roomsize = 0.4;
 ResponsiveAnalogRead analog_room(POT_ROOM_PIN, true);
 
@@ -127,7 +127,11 @@ void loop() {
 
   analog_room.update();
   if (analog_room.hasChanged()) {
-    roomsize = analog_room.getValue() / 1023.0;
+    int rawRoomsize = analog_room.getValue();
+    roomsize = map(rawRoomsize, 915, 1023, 0, 100) / 100.0;
+    if(roomsize<0){
+      roomsize = 0.0;
+    }
     reverb.roomsize(roomsize);
     Serial.print("Reverb: ");
     Serial.println(roomsize, 2);
