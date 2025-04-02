@@ -95,7 +95,7 @@ void setup() {
   analog_vol.setSnapMultiplier(0.03);
   analog_vol.enableEdgeSnap();
 
-  analog_room.setActivityThreshold(20);
+  analog_room.setActivityThreshold(40);
   analog_room.setSnapMultiplier(0.03);
   analog_room.enableEdgeSnap();
 
