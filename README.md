@@ -8,6 +8,10 @@ A compact audio synthesizer running on the **Teensy 4.0** microcontroller with t
 - **Real-time control**: volume, reverb, waveform mode selection and stereo Freeverb reverb (adjustable room size)
 - **Responsive I/O**: debounced keys, smoothed potentiometers
 
+![3D Render](3D_render.png)
+
+
+
 ## Repository Structure
 
 ```
