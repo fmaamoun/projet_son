@@ -1,14 +1,11 @@
 # Teensy Polyphonic Synthesizer
 
-A compact, real-time audio synthesizer running on the **Teensy 4.0** microcontroller with the SGTL5000 audio codec. Featuring 4-voice polyphony, 5 waveform modes, volume control, and stereo reverb control.
-
 ## Overview
 
-This project demonstrates a complete DSP audio system on embedded hardware:
+A compact audio synthesizer running on the **Teensy 4.0** microcontroller with the **SGTL5000** audio codec, demonstrating a complete DSP audio system on embedded hardware. It features:
 - **4 independent voices** with per-voice oscillators and envelopes
 - **5 waveform modes**: sine, square, sawtooth, triangle, pulse
-- **Real-time control**: volume, reverb, waveform mode selection
-- **Stereo effects**: freeverb (adjustable room size and damping)
+- **Real-time control**: volume, reverb, waveform mode selection and stereo Freeverb reverb (adjustable room size)
 - **Responsive I/O**: debounced keys, smoothed potentiometers
 
 ## Repository Structure
@@ -83,10 +80,9 @@ voice4 ──┘           reverb ────────┘
 |-----------|-----|-------|
 | Teensy 4.0 | 1 | Microcontroller (primary target) |
 | Teensy Audio Shield | 1 | SGTL5000 codec, includes stereo I/O |
-| Volume potentiometer | 1 | Analog input for master volume (with appropriate pull-up resistor) |
-| Reverb potentiometer | 1 | Analog input for room size control (with appropriate pull-up resistor) |
+| Potentiometers | 2 | Volume (A0) & Reverb room size (A8) with pull-up resistors |
 | Momentary switches | 8 | Note keys (C D E F G A B) & Waveform selector (with pull-up resistors) |
-| Pull-up resistors | ~10 | 10kΩ typical for buttons and pot inputs |
+| Pull-up resistors | 10 | 10kΩ typical for buttons and pot inputs |
 | Headphones / Speaker | 1 | Audio output |
 
 ### Pin Mapping
@@ -126,7 +122,7 @@ Teensy 4.0
 │ │ Pin 23 (DAC out) ────┤┤ → Stereo headphones / speaker
 │ │ Pin 22 (DAC out) ────┤┤
 │ │ GND ─────────────────┤┤
-│ │ 3.3V  ────────────────||
+│ │ 3.3V ────────────────┤┤
 │ └──────────────────────┘│
 └─────────────────────────┘
 ```
@@ -156,16 +152,15 @@ Teensy 4.0
 5. **Press mode button** (pin 17) to cycle waveforms: SINE → SQUARE → SAW → TRIANGLE → PULSE
 6. **Adjust reverb pot** (A8) to add/remove reverb (room size 0–100%)
 
-### Serial Monitor Output
-You should see debug messages like:
-```
-Mode: SINE
-Volume: 0.50
-Reverb: 0.40
-Mode changed to: SQUARE
-Note ON: C
-Note OFF: C
-Mode changed to: SQUARE
-Note ON: C
-Note OFF: C
-```
+> In the serial monitor output, you should see debug messages such as:
+>   ```
+>  Mode: SINE
+>  Volume: 0.50
+>  Reverb: 0.40
+>  Mode changed to: SQUARE
+>  Note ON: C
+>  Note OFF: C
+>  Mode changed to: SQUARE
+>  Note ON: C
+>  Note OFF: C
+>  ```
