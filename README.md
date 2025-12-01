@@ -30,6 +30,13 @@ The synthesizer processes audio in real-time through a fixed audio graph:
 3. **Dry/Wet mixer** blends direct signal with reverb effect
 4. **Stereo output** sends final mix to headphones or speaker
 
+```
+voice1 ──┐
+voice2 ──├─→ mixer ──→ dryWetMixer ──┐
+voice3 ──┤              ↓            ├─→ out (stereo)
+voice4 ──┘           reverb ────────┘
+```
+
 ### Key Press → Sound Generation
 When you press a key:
 1. The debouncer detects a valid key press
@@ -66,14 +73,6 @@ To prevent clipping when multiple voices play:
 - Distributes gain equally: `gain = 1.0 / activeVoices`
 - If all voices are idle, gain defaults to 1.0
 - This ensures consistent output level regardless of polyphony count
-
-### Audio Graph
-```
-voice1 ──┐
-voice2 ──├─→ mixer ──→ dryWetMixer ──┐
-voice3 ──┤              ↓            ├─→ out (stereo)
-voice4 ──┘           reverb ────────┘
-```
 
 
 ## Hardware Setup
