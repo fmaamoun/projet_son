@@ -1,41 +1,37 @@
 #include "MyDsp.h"
-#include <math.h> // pour fabs()
+#include <math.h>
 
+// Constants
 #define AUDIO_OUTPUTS 1
 #define MULT_16 32767
-
-// Durée du fade-out en millisecondes
 #define RELEASE_TIME_MS 150 
 
 MyDsp::MyDsp()
   : AudioStream(AUDIO_OUTPUTS, new audio_block_t*[AUDIO_OUTPUTS]),
     sine(AUDIO_SAMPLE_RATE_EXACT)
 {
-
+  // Initial voice state
   isPlaying = false;
   isReleasing = false;
   currentAmplitude = 0.0f;
 
-  // Conversion de la durée de release en nombre d'échantillons
+  // Convert release duration to number of samples
   float sr = AUDIO_SAMPLE_RATE_EXACT;
   releaseFrames = (unsigned int)((RELEASE_TIME_MS / 1000.0f) * sr);
 
-  // Initialisation de la phase et du mode
+  // Initialize phase and default mode
   phase = 0.0f;
   phaseIncrement = 0.0f;
-  mode = MODE_SINE; // mode par défaut
+  mode = MODE_SINE;
 }
 
 MyDsp::~MyDsp() {
-  // Rien de spécifique à libérer
 }
 
 void MyDsp::setFreq(float freq) {
-  // Pour le mode SINE, on utilise l'objet sine
-  sine.setFrequency(freq);
-  // Pour les autres modes, calcule du phaseIncrement (phase normalisée entre 0 et 1)
-  phaseIncrement = freq / AUDIO_SAMPLE_RATE_EXACT;
-  phase = 0.0f; // réinitialisation de la phase à chaque note
+  sine.setFrequency(freq); // used when mode == SINE
+  phaseIncrement = freq / AUDIO_SAMPLE_RATE_EXACT; // for non-sine modes
+  phase = 0.0f;
 }
 
 void MyDsp::noteOn(float freq) {
@@ -56,15 +52,18 @@ void MyDsp::setMode(int newMode) {
 void MyDsp::update(void) {
   audio_block_t* outBlock[AUDIO_OUTPUTS];
 
+  // Process each output channel
   for (int channel = 0; channel < AUDIO_OUTPUTS; channel++) {
     outBlock[channel] = allocate();
     if (!outBlock[channel]) continue;
 
+    // Fill the audio block with generated samples
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
       float inOsc = 0.0f;
       if (isPlaying || isReleasing) {
         float sampleVal = 0.0f;
-        // Génération de l'onde selon le mode
+
+        // Waveform generation per current mode
         if (mode == MODE_SINE) {
           sampleVal = sine.tick();
         } else if (mode == MODE_SQUARE) {
@@ -76,12 +75,10 @@ void MyDsp::update(void) {
           phase += phaseIncrement;
           if (phase >= 1.0f) phase -= 1.0f;
         } else if (mode == MODE_TRIANGLE) {
-          // Onde triangulaire : formule classique
           sampleVal = 4.0f * fabs(phase - 0.5f) - 1.0f;
           phase += phaseIncrement;
           if (phase >= 1.0f) phase -= 1.0f;
         } else if (mode == MODE_PULSE) {
-          // Onde impulsion : rapport cyclique fixe (ici 25%)
           sampleVal = (phase < 0.25f) ? 1.0f : -1.0f;
           phase += phaseIncrement;
           if (phase >= 1.0f) phase -= 1.0f;
@@ -89,9 +86,9 @@ void MyDsp::update(void) {
         inOsc = sampleVal * 0.5f * currentAmplitude;
       }
 
-      float currentSample =inOsc;
+      float currentSample = inOsc;
 
-      // Gestion du fade-out
+      // Handle fade-out (decrement amplitude each sample)
       if (isReleasing) {
         float ampDecrement = 1.0f / (float)releaseFrames;
         currentAmplitude -= ampDecrement;
@@ -102,12 +99,15 @@ void MyDsp::update(void) {
         }
       }
 
-      // Limitation pour éviter la saturation
+      // Clipping to avoid saturation
       currentSample = max(-1.0f, min(1.0f, currentSample));
       outBlock[channel]->data[i] = (int16_t)(currentSample * MULT_16);
     }
 
+    // Transmit the audio block
     transmit(outBlock[channel], channel);
+
+    // Release the block
     release(outBlock[channel]);
   }
 }

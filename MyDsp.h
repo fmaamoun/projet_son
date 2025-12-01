@@ -6,7 +6,7 @@
 #include "Audio.h"
 #include "Sine.h"
 
-// Définition des modes de synthèse
+// Synthesizer modes
 enum SynthMode {
   MODE_SINE,
   MODE_SQUARE,
@@ -15,42 +15,45 @@ enum SynthMode {
   MODE_PULSE
 };
 
+// Custom DSP class for a simple synthesizer voice
 class MyDsp : public AudioStream {
   public:
     MyDsp();
     ~MyDsp();
 
-    // Méthode update() appelée en continu par le moteur Audio
+    // update() method called continuously by the Audio engine
     virtual void update(void);
 
-    // Lance la note à la fréquence indiquée
+    // Start the note at the given frequency
     void noteOn(float freq);
 
-    // Déclenche le fade-out pour arrêter la note en douceur
+    // Trigger a fade-out to stop the note smoothly
     void noteOff();
 
-    // Permet de changer le mode de synthèse (onde)
+    // Change the synth mode (waveform)
     void setMode(int newMode);
 
   private:
-    // Modifie la fréquence de l'oscillateur et met à jour la phase (pour modes non-sinusoïdaux)
+    // Set the oscillator frequency and update the phase (used for non-sinusoidal modes)
     void setFreq(float freq);
 
-    // Etat de la note
+    // Note state
     bool isPlaying;
     bool isReleasing;
     float currentAmplitude;
-    // Nombre d'échantillons pour le fade-out
+
+    // Number of samples used for the fade-out
     unsigned int releaseFrames;
 
-    // Oscillateur utilisé pour le mode SINE
+    // Oscillator used for SINE mode
     Sine sine;
-    // Pour les modes non-sinusoïdaux, on utilise un accumulateur de phase
+    
+    // For non-sinusoidal modes, use a phase accumulator
     float phase;
     float phaseIncrement;
     
-    // Mode de synthèse courant
+    // Current synth mode
     int mode;
 };
 
-#endif // MYDSP_H
+#endif
