@@ -1,5 +1,11 @@
 # Audio Project - Polyphonic Synthesizer
 
+![Status](https://img.shields.io/badge/Status-Functional-success)
+![C++](https://img.shields.io/badge/C++-14-00599C?logo=c%2B%2B&logoColor=white)
+![Arduino](https://img.shields.io/badge/Platform-Arduino_IDE-00979D?logo=arduino&logoColor=white)
+![Teensy](https://img.shields.io/badge/Hardware-Teensy_4.0-orange?logo=arduino&logoColor=white)
+![Audio](https://img.shields.io/badge/Audio_Codec-SGTL5000-ff69b4)
+
 ## Overview
 
 A compact audio synthesizer running on the **Teensy 4.0** microcontroller with the **SGTL5000** audio codec, demonstrating a complete DSP audio system on embedded hardware. It features:
